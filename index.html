@@ -597,10 +597,12 @@ function shuffleGames() {
 
 function startGame() {
     const nameInput = document.getElementById('usernameInput');
-    if (nameInput && nameInput.value.trim() !== '') {
-        currentUsername = nameInput.value.trim();
-    } else {
-        currentUsername = '익명';
+    if (nameInput) {
+        if (nameInput.value.trim() !== '') {
+            currentUsername = nameInput.value.trim();
+        } else {
+            currentUsername = '익명';
+        }
     }
 
     const diffInputs = document.getElementsByName('difficulty');
