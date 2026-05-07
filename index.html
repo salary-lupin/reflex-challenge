@@ -656,7 +656,7 @@
             }
 
             const renderRow = (r, idx, isLastPlayed) => {
-                const diffStr = r.difficulty === 'high' ? '상' : (r.difficulty === 'medium' ? '중' : (r.difficulty === 'low' ? '하' : '기본'));
+                const diffStr = r.difficulty === 'extreme' ? '최상' : (r.difficulty === 'high' ? '상' : (r.difficulty === 'medium' ? '중' : (r.difficulty === 'low' ? '하' : '기본')));
                 const scoreStr = r.score !== undefined ? `${r.score}점` : '-';
                 const nameStr = r.name ? r.name : '익명';
                 const highlightStyle = isLastPlayed ? 'background-color: #e8f4fd; border: 2px solid #3498db; border-radius: 8px; padding: 10px; margin-top: 5px; margin-bottom: 5px;' : '';
