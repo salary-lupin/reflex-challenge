@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reaction 10 Challenge</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <style>
     body {
         background-color: #e0e5ec;
@@ -158,13 +161,30 @@
 <div id="app"></div>
 
 <script>
-/**
- * 저장 방식: localStorage 사용 (구현 및 브라우저 호환성 용이)
- * 브라우저를 재시작해도 유지되며 최대 10개의 랭킹 데이터가 관리됩니다.
- */
-const storageKey = 'reaction10Rankings';
+// 파이어베이스 설정 (여기에 사용자 프로젝트 정보를 입력하세요)
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+// 파이어베이스 초기화
+let dbRef = null;
+try {
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    dbRef = database.ref('reaction10Rankings');
+} catch (e) {
+    console.error("Firebase 초기화 에러:", e);
+}
 
 // 전역 상태 변수
+let currentUsername = '익명';
+let globalRankings = [];
 let gameState = 'home'; // home, intro, ready, playing, result, clear
 let currentStageIndex = 0;
 let gameSequence = [];
@@ -482,48 +502,61 @@ function formatDate(date) {
     return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-// 로컬 스토리지 데이터 관리
-function loadRankings() {
-    return JSON.parse(localStorage.getItem(storageKey) || '[]');
+// 파이어베이스 실시간 데이터 연동
+if (dbRef) {
+    dbRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        let rankings = [];
+        if (data) {
+            for (let key in data) {
+                rankings.push(data[key]);
+            }
+        }
+        // 점수가 높은 순으로 정렬 (내림차순)
+        rankings.sort((a, b) => (b.score || 0) - (a.score || 0));
+        globalRankings = rankings.slice(0, 10);
+        
+        if (gameState === 'home') {
+            const board = document.getElementById('rankingBoardContent');
+            if (board) board.innerHTML = getRankingsHtml();
+        }
+    });
 }
 
 function saveRanking(totalTimeMs) {
-    let rankings = loadRankings();
-    
-    // 점수 계산: 기본점수 - 걸린시간(초)
     const timeInSeconds = totalTimeMs / 1000;
     const score = parseFloat((baseScore - timeInSeconds).toFixed(3));
     
-    rankings.push({
+    const newRecord = {
+        name: currentUsername,
         date: formatDate(new Date()),
         totalTimeMs: totalTimeMs,
         difficulty: currentDifficulty,
         score: score
-    });
+    };
     
-    // 점수가 높은 순으로 정렬 (내림차순)
-    rankings.sort((a, b) => (b.score || 0) - (a.score || 0));
-    rankings = rankings.slice(0, 10);
-    localStorage.setItem(storageKey, JSON.stringify(rankings));
+    if (dbRef) {
+        dbRef.push(newRecord);
+    }
 }
 
-function renderRankings() {
-    const rankings = loadRankings();
-    if (rankings.length === 0) {
-        return '<p style="text-align:center; color:#7f8c8d;">아직 기록이 없습니다.</p>';
+function getRankingsHtml() {
+    if (globalRankings.length === 0) {
+        return '<p style="text-align:center; color:#7f8c8d;">데이터베이스에 연결하여 랭킹을 불러오는 중이거나 기록이 없습니다.</p>';
     }
     let html = '<ol class="ranking-list" style="font-size:0.95rem;">';
-    rankings.forEach((r, idx) => {
+    globalRankings.forEach((r, idx) => {
         const diffStr = r.difficulty === 'high' ? '상' : (r.difficulty === 'medium' ? '중' : (r.difficulty === 'low' ? '하' : '기본'));
         const scoreStr = r.score !== undefined ? `${r.score}점` : '-';
+        const nameStr = r.name ? r.name : '익명';
         html += `<li style="display:flex; flex-direction:column; padding:10px 0;">
             <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                <span class="rank-date" style="color:#2c3e50; font-weight:bold;">${idx+1}. ${r.date}</span>
+                <span class="rank-date" style="color:#2c3e50; font-weight:bold;">${idx+1}. [${nameStr}] <span style="font-weight:normal;">${formatTime(r.totalTimeMs)}</span></span>
                 <span style="font-weight:bold; color:#2980b9;">${scoreStr}</span>
             </div>
             <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
                 <span style="color:#7f8c8d;">난이도: ${diffStr}</span>
-                <span class="rank-time">${formatTime(r.totalTimeMs)}</span>
+                <span class="rank-time" style="color:#95a5a6;">${r.date}</span>
             </div>
         </li>`;
     });
@@ -538,6 +571,12 @@ function renderHome() {
         <div class="home-screen">
             <h1 style="color:#2c3e50;">Reaction 10 Challenge</h1>
             <p>10개의 순발력 미니게임을 통과하세요!</p>
+            
+            <div style="margin: 20px 0; padding: 15px; border-radius: 8px; text-align: left; border: 1px solid #ddd;">
+                <h3 style="margin-top:0; text-align:center; color:#2c3e50;">플레이어 이름</h3>
+                <input type="text" id="usernameInput" placeholder="이름을 입력하세요 (예: 홍길동)" style="padding:10px; width:100%; box-sizing:border-box; font-size:1rem; border:1px solid #ccc; border-radius:5px;" maxlength="10">
+            </div>
+
             <div style="margin: 20px 0; background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: left;">
                 <h3 style="margin-top:0; text-align:center;">난이도 설정</h3>
                 <label style="display:block; margin-bottom:10px;"><input type="radio" name="difficulty" value="high" checked> 상 (제한시간 2초, 기본점수 100점)</label>
@@ -547,11 +586,19 @@ function renderHome() {
             </div>
             <button class="primary-btn" onclick="startGame()">게임 시작하기</button>
             <div class="ranking-board">
-                <h2>TOP 10 랭킹</h2>
-                ${renderRankings()}
+                <h2>🌍 글로벌 TOP 10 랭킹</h2>
+                <div id="rankingBoardContent">
+                    ${getRankingsHtml()}
+                </div>
             </div>
         </div>
     `;
+    
+    // 이전에 입력했던 이름이 있으면 유지
+    const nameInput = document.getElementById('usernameInput');
+    if (nameInput && currentUsername !== '익명') {
+        nameInput.value = currentUsername;
+    }
 }
 
 function shuffleGames() {
@@ -559,6 +606,13 @@ function shuffleGames() {
 }
 
 function startGame() {
+    const nameInput = document.getElementById('usernameInput');
+    if (nameInput && nameInput.value.trim() !== '') {
+        currentUsername = nameInput.value.trim();
+    } else {
+        currentUsername = '익명';
+    }
+
     const diffInputs = document.getElementsByName('difficulty');
     for (const input of diffInputs) {
         if (input.checked) {
