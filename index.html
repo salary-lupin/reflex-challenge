@@ -175,6 +175,8 @@ try {
 // 전역 상태 변수
 let currentUsername = '익명';
 let globalRankings = [];
+let fullRankings = [];
+let lastPlayedDate = null;
 let gameState = 'home'; // home, intro, ready, playing, result, clear
 let currentStageIndex = 0;
 let gameSequence = [];
@@ -504,6 +506,7 @@ if (dbRef) {
         }
         // 점수가 높은 순으로 정렬 (내림차순)
         rankings.sort((a, b) => (b.score || 0) - (a.score || 0));
+        fullRankings = rankings;
         globalRankings = rankings.slice(0, 10);
         
         if (gameState === 'home' || gameState === 'clear') {
@@ -524,6 +527,7 @@ function saveRanking(totalTimeMs) {
         difficulty: currentDifficulty,
         score: score
     };
+    lastPlayedDate = newRecord.date;
     
     if (dbRef) {
         dbRef.push(newRecord);
@@ -535,11 +539,19 @@ function getRankingsHtml() {
         return '<p style="text-align:center; color:#7f8c8d;">데이터베이스에 연결하여 랭킹을 불러오는 중이거나 기록이 없습니다.</p>';
     }
     let html = '<ol class="ranking-list" style="font-size:0.95rem;">';
-    globalRankings.forEach((r, idx) => {
+    
+    let myRankIndex = -1;
+    if (lastPlayedDate) {
+        myRankIndex = fullRankings.findIndex(r => r.date === lastPlayedDate && r.name === currentUsername);
+    }
+    
+    const renderRow = (r, idx, isLastPlayed) => {
         const diffStr = r.difficulty === 'high' ? '상' : (r.difficulty === 'medium' ? '중' : (r.difficulty === 'low' ? '하' : '기본'));
         const scoreStr = r.score !== undefined ? `${r.score}점` : '-';
         const nameStr = r.name ? r.name : '익명';
-        html += `<li style="display:flex; flex-direction:column; padding:10px 0;">
+        const highlightStyle = isLastPlayed ? 'background-color: #e8f4fd; border: 2px solid #3498db; border-radius: 8px; padding: 10px; margin-top: 5px; margin-bottom: 5px;' : '';
+        
+        return `<li style="display:flex; flex-direction:column; ${highlightStyle}">
             <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                 <span class="rank-date" style="color:#2c3e50; font-weight:bold;">${idx+1}. [${nameStr}] <span style="font-weight:normal;">${formatTime(r.totalTimeMs)}</span></span>
                 <span style="font-weight:bold; color:#2980b9;">${scoreStr}</span>
@@ -549,7 +561,18 @@ function getRankingsHtml() {
                 <span class="rank-time" style="color:#95a5a6;">${r.date}</span>
             </div>
         </li>`;
+    };
+
+    globalRankings.forEach((r, idx) => {
+        const isLastPlayed = (myRankIndex === idx);
+        html += renderRow(r, idx, isLastPlayed);
     });
+    
+    if (myRankIndex >= 10) {
+        html += `<li style="text-align:center; padding: 10px 0; color:#7f8c8d; justify-content:center; border-bottom:none;">...</li>`;
+        html += renderRow(fullRankings[myRankIndex], myRankIndex, true);
+    }
+    
     html += '</ol>';
     return html;
 }
