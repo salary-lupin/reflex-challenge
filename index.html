@@ -469,14 +469,14 @@ const games = [
         example: '1 -> 2 -> 3 -> 4',
         createQuestion: () => {
             const seqList = currentDifficulty === 'extreme' ? [
-                ['1', '2', '3', '4', '5', '6'],
-                ['A', 'B', 'C', 'D', 'E', 'F'],
-                ['가', '나', '다', '라', '마', '바'],
-                ['월', '화', '수', '목', '금', '토'],
-                ['도', '레', '미', '파', '솔', '라'],
-                ['일', '이', '삼', '사', '오', '육'],
-                ['첫째', '둘째', '셋째', '넷째', '다섯째', '여섯째'],
-                ['10', '20', '30', '40', '50', '60']
+                ['1', '2', '3', '4', '5'],
+                ['A', 'B', 'C', 'D', 'E'],
+                ['가', '나', '다', '라', '마'],
+                ['월', '화', '수', '목', '금'],
+                ['도', '레', '미', '파', '솔'],
+                ['일', '이', '삼', '사', '오'],
+                ['첫째', '둘째', '셋째', '넷째', '다섯째'],
+                ['10', '20', '30', '40', '50']
             ] : [
                 ['1', '2', '3', '4'],
                 ['A', 'B', 'C', 'D'],
@@ -737,7 +737,7 @@ function renderQuestion() {
             const z = zones[idx % zones.length];
             const top = Math.floor(Math.random() * (z.tMax - z.tMin + 1)) + z.tMin;
             const left = Math.floor(Math.random() * (z.lMax - z.lMin + 1)) + z.lMin;
-            const transitionStyle = isMovingGame ? 'transition: top 0.5s, left 0.5s;' : '';
+            const transitionStyle = isMovingGame ? 'transition: top 0.7s, left 0.7s;' : '';
             html += `<button id="btn-${idx}" class="opt-btn moving-btn" style="position:absolute; top:${top}%; left:${left}%; padding:10px 15px; font-size:1rem; white-space:nowrap; ${transitionStyle}" onmousedown="handleAnswer(${idx}, event, this)">${opt}</button>`;
         });
         html += `</div>`;
@@ -782,7 +782,7 @@ function startStage() {
                 btn.style.top = top + '%';
                 btn.style.left = left + '%';
             });
-        }, 500);
+        }, 700);
     }
 }
 
