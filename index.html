@@ -506,7 +506,7 @@ if (dbRef) {
         rankings.sort((a, b) => (b.score || 0) - (a.score || 0));
         globalRankings = rankings.slice(0, 10);
         
-        if (gameState === 'home') {
+        if (gameState === 'home' || gameState === 'clear') {
             const board = document.getElementById('rankingBoardContent');
             if (board) board.innerHTML = getRankingsHtml();
         }
@@ -794,7 +794,9 @@ function finishGame(isClear) {
             <p style="font-size:1.3rem; font-weight:bold;">총 걸린 시간: ${formatTime(accumulatedTime)}</p>
             <div class="ranking-board">
                 <h3>TOP 10 랭킹</h3>
-                ${renderRankings()}
+                <div id="rankingBoardContent">
+                    ${getRankingsHtml()}
+                </div>
             </div>
             <button class="primary-btn" style="margin-top:20px;" onclick="renderHome()">홈으로 돌아가기</button>
         `;
