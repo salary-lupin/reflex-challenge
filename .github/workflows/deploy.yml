@@ -28,6 +28,9 @@ jobs:
           echo "  appId: \"${{ secrets.FIREBASE_APP_ID }}\"" >> config.js
           echo "};" >> config.js
 
+      - name: Remove config.js from .gitignore for deployment
+        run: sed -i '/config.js/d' .gitignore || rm .gitignore
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
